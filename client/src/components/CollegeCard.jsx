@@ -101,7 +101,11 @@ export default function CollegeCard({
             <div>
               <span className="text-slate-400 block text-[9px] sm:text-[10px] font-semibold uppercase">Annual Fees</span>
               <span className="text-slate-800 font-extrabold text-xs sm:text-base">
-                ₹{(college.min_annual_fee / 100000).toFixed(1)}L - ₹{(college.max_annual_fee / 100000).toFixed(1)}L
+                {college.min_annual_fee && college.max_annual_fee
+                  ? `₹${(college.min_annual_fee / 100000).toFixed(1)}L - ₹${(college.max_annual_fee / 100000).toFixed(1)}L`
+                  : college.min_annual_fee
+                  ? `₹${(college.min_annual_fee / 100000).toFixed(1)}L/yr`
+                  : 'Contact Inst.'}
               </span>
             </div>
           </div>
@@ -110,16 +114,18 @@ export default function CollegeCard({
           <div className="mt-2.5">
             <span className="text-[10px] sm:text-[11px] font-semibold text-slate-400 block mb-1 flex items-center truncate">
               <GraduationCap className="w-3 h-3 sm:w-3.5 sm:h-3.5 mr-1 text-sky-500 shrink-0" />
-              <span className="truncate">{college.total_courses_count || 'Multiple'} Verified Courses:</span>
+              <span className="truncate">
+                {college.total_courses_count || (college.courses ? college.courses.length : 'Multiple')} Verified Courses:
+              </span>
             </span>
             <div className="flex flex-wrap gap-1">
-              {(college.top_courses_sample || 'B.Tech | MBA').split(' | ').slice(0, 2).map((c, i) => (
+              {(college.top_courses_sample || (college.courses && college.courses.length > 0 ? college.courses.map(c => c.course_name).slice(0, 2).join(' | ') : 'B.Tech | MBA')).split(' | ').slice(0, 2).map((c, i) => (
                 <span key={i} className="text-[10px] sm:text-[11px] bg-slate-100 text-slate-700 px-1.5 sm:px-2 py-0.5 rounded-md font-medium truncate max-w-[140px] sm:max-w-[180px]">
                   {c}
                 </span>
               ))}
               <span className="text-[10px] sm:text-[11px] bg-sky-50 text-sky-700 px-1 sm:px-1.5 py-0.5 rounded-md font-semibold shrink-0">
-                +{college.total_courses_count > 2 ? college.total_courses_count - 2 : 1}
+                +{college.total_courses_count ? (college.total_courses_count > 2 ? college.total_courses_count - 2 : 1) : (college.courses && college.courses.length > 2 ? college.courses.length - 2 : 1)}
               </span>
             </div>
           </div>

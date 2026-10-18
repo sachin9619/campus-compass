@@ -123,7 +123,7 @@ export default function Hero({
               </div>
 
               <div className="py-2 px-3 text-center">
-                <span className="text-xl sm:text-2xl font-black text-emerald-400 block">₹{stats.avgSalary} LPA</span>
+                <span className="text-xl sm:text-2xl font-black text-emerald-400 block">₹{stats.avgSalary || stats.avgPackageLpa || '12.5'} LPA</span>
                 <span className="text-[11px] text-slate-400 font-medium">Average Placement CTC</span>
               </div>
 

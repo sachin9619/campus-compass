@@ -4,6 +4,23 @@ import { collegesData, sampleReviews } from '../data/collegesData';
 const STORAGE_INQUIRIES_KEY = 'campus_compass_inquiries';
 const STORAGE_COLLEGES_KEY = 'campus_compass_custom_colleges';
 const STORAGE_BOOKMARKS_KEY = 'campus_compass_bookmarks';
+const STORAGE_REVIEWS_KEY = 'campus_compass_reviews';
+
+export function getLocalReviews() {
+  try {
+    return JSON.parse(localStorage.getItem(STORAGE_REVIEWS_KEY) || '[]');
+  } catch (e) {
+    return [];
+  }
+}
+
+export function saveLocalReviews(reviews) {
+  try {
+    localStorage.setItem(STORAGE_REVIEWS_KEY, JSON.stringify(reviews));
+  } catch (e) {
+    // ignore
+  }
+}
 
 // Helper to get all colleges (combining seed data and custom admin modifications)
 export function getLocalColleges() {
@@ -122,19 +139,12 @@ function handleOfflineFallback(url, options, method) {
   const params = parsedUrl.searchParams;
   const allColleges = getLocalColleges();
 
-  // 1. GET /api/colleges/all-names
+  // 1. GET /api/colleges/all-names (Full dataset for comparison matrix and pickers)
   if (path === '/api/colleges/all-names') {
     const list = allColleges.map(c => ({
-      id: c.id,
-      name: c.name,
+      ...c,
       short_name: c.short_name || c.name,
-      slug: c.slug,
-      category: c.category,
-      city: c.city,
-      state: c.state,
-      nirf_rank_2024: c.nirf_rank_2024,
-      avg_package_lpa: c.avg_package_lpa,
-      banner_url: c.banner_url
+      rating: c.rating || 4.7
     }));
     return { data: list, status: 200, ok: true };
   }
@@ -148,7 +158,9 @@ function handleOfflineFallback(url, options, method) {
         totalColleges: allColleges.length,
         totalCourses: allColleges.reduce((acc, c) => acc + (c.courses ? c.courses.length : 0), 0),
         avgPackageLpa: parseFloat(avgPkg),
+        avgSalary: parseFloat(avgPkg),
         highestPackageLpa: maxPkg,
+        highestSalary: maxPkg,
         itCount: allColleges.filter(c => c.category === 'IT' || c.category === 'Both').length,
         managementCount: allColleges.filter(c => c.category === 'Management' || c.category === 'Both').length
       },
@@ -171,7 +183,7 @@ function handleOfflineFallback(url, options, method) {
     };
   }
 
-  // 4. GET /api/colleges (with search, category, filters, sort, pagination)
+  // 4. GET /api/colleges (with search, category, filters, sort, pagination, and calculated courses)
   if (path === '/api/colleges' && method === 'GET') {
     const search = (params.get('search') || '').toLowerCase().trim();
     const category = params.get('category');
@@ -215,8 +227,9 @@ function handleOfflineFallback(url, options, method) {
     filtered.sort((a, b) => {
       if (sort === 'name_asc') return (a.short_name || a.name).localeCompare(b.short_name || b.name);
       if (sort === 'name_desc') return (b.short_name || b.name).localeCompare(a.short_name || a.name);
-      if (sort === 'nirf_asc') return (a.nirf_rank_2024 || 999) - (b.nirf_rank_2024 || 999);
+      if (sort === 'nirf_asc' || sort === 'nirf') return (a.nirf_rank_2024 || 999) - (b.nirf_rank_2024 || 999);
       if (sort === 'package_desc') return (b.avg_package_lpa || 0) - (a.avg_package_lpa || 0);
+      if (sort === 'rating') return (b.rating || 0) - (a.rating || 0);
       if (sort === 'fee_asc') return (a.min_annual_fee || 0) - (b.min_annual_fee || 0);
       if (sort === 'fee_desc') return (b.max_annual_fee || 0) - (a.max_annual_fee || 0);
       return 0;
@@ -227,9 +240,17 @@ function handleOfflineFallback(url, options, method) {
     const startIndex = (page - 1) * limit;
     const paginated = filtered.slice(startIndex, startIndex + limit);
 
+    const bookmarkedIds = JSON.parse(localStorage.getItem(STORAGE_BOOKMARKS_KEY) || '[]');
+    const enhanced = paginated.map(c => ({
+      ...c,
+      is_bookmarked: bookmarkedIds.includes(c.id),
+      total_courses_count: c.total_courses_count || (c.courses ? c.courses.length : 3),
+      top_courses_sample: c.top_courses_sample || (c.courses && c.courses.length > 0 ? c.courses.map(cr => cr.course_name).slice(0, 2).join(' | ') : 'B.Tech | MBA')
+    }));
+
     return {
       data: {
-        colleges: paginated,
+        colleges: enhanced,
         pagination: { page, limit, totalPages, total }
       },
       status: 200,
@@ -237,18 +258,33 @@ function handleOfflineFallback(url, options, method) {
     };
   }
 
-  // 5. GET /api/colleges/:slug
+  // 5. GET /api/colleges/:slug (Full profile + matching verified student reviews)
   const slugMatch = path.match(/^\/api\/colleges\/([a-zA-Z0-9-]+)$/);
   if (slugMatch && method === 'GET') {
     const slug = slugMatch[1];
     const college = allColleges.find(c => c.slug === slug);
     if (college) {
-      return { data: college, status: 200, ok: true };
+      const localReviews = getLocalReviews();
+      const collegeReviews = [
+        ...sampleReviews.filter(r => r.college_slug === slug),
+        ...localReviews.filter(r => r.college_slug === slug || r.college_id === college.id)
+      ];
+      const bookmarkedIds = JSON.parse(localStorage.getItem(STORAGE_BOOKMARKS_KEY) || '[]');
+      return {
+        data: {
+          ...college,
+          is_bookmarked: bookmarkedIds.includes(college.id),
+          reviews: collegeReviews,
+          reviews_count: collegeReviews.length || college.reviews_count || 100
+        },
+        status: 200,
+        ok: true
+      };
     }
     return { data: { error: 'College not found' }, status: 404, ok: false };
   }
 
-  // 6. GET /api/courses
+  // 6. GET /api/courses (with domain, degree_level, and search query filters)
   if (path === '/api/courses' && method === 'GET') {
     const courses = [];
     allColleges.forEach(col => {
@@ -257,14 +293,33 @@ function handleOfflineFallback(url, options, method) {
           courses.push({
             ...crs,
             college_name: col.name,
+            college_short_name: col.short_name || col.name,
             college_slug: col.slug,
+            college_city: col.city,
             city: col.city,
             state: col.state
           });
         });
       }
     });
-    return { data: courses, status: 200, ok: true };
+
+    const domain = params.get('domain');
+    const degreeLevel = params.get('degree_level');
+    const search = (params.get('search') || '').toLowerCase().trim();
+
+    const filteredCourses = courses.filter(crs => {
+      if (domain && domain !== 'All' && crs.domain !== domain) return false;
+      if (degreeLevel && degreeLevel !== 'All' && crs.degree_level !== degreeLevel) return false;
+      if (search) {
+        const match = (crs.course_name || '').toLowerCase().includes(search) ||
+                      (crs.specialization || '').toLowerCase().includes(search) ||
+                      (crs.college_name || '').toLowerCase().includes(search);
+        if (!match) return false;
+      }
+      return true;
+    });
+
+    return { data: filteredCourses, status: 200, ok: true };
   }
 
   // 7. POST /api/auth/login
@@ -337,7 +392,10 @@ function handleOfflineFallback(url, options, method) {
   if (path === '/api/auth/bookmarks') {
     try {
       const ids = JSON.parse(localStorage.getItem(STORAGE_BOOKMARKS_KEY) || '[]');
-      const bookmarked = allColleges.filter(c => ids.includes(c.id));
+      const bookmarked = allColleges.filter(c => ids.includes(c.id)).map(c => ({
+        ...c,
+        is_bookmarked: true
+      }));
       return { data: bookmarked, status: 200, ok: true };
     } catch(e) {
       return { data: [], status: 200, ok: true };
@@ -347,16 +405,28 @@ function handleOfflineFallback(url, options, method) {
   const bookmarkMatch = path.match(/^\/api\/auth\/bookmarks\/([0-9]+)$/);
   if (bookmarkMatch) {
     const id = parseInt(bookmarkMatch[1], 10);
+    let isBookmarked = false;
+    let message = '';
     try {
       let ids = JSON.parse(localStorage.getItem(STORAGE_BOOKMARKS_KEY) || '[]');
       if (method === 'POST') {
-        if (!ids.includes(id)) ids.push(id);
+        if (!ids.includes(id)) {
+          ids.push(id);
+          isBookmarked = true;
+          message = 'College added to your shortlist';
+        } else {
+          ids = ids.filter(x => x !== id);
+          isBookmarked = false;
+          message = 'Removed from your shortlisted colleges';
+        }
       } else if (method === 'DELETE') {
         ids = ids.filter(x => x !== id);
+        isBookmarked = false;
+        message = 'Removed from your shortlisted colleges';
       }
       localStorage.setItem(STORAGE_BOOKMARKS_KEY, JSON.stringify(ids));
     } catch(e){}
-    return { data: { success: true }, status: 200, ok: true };
+    return { data: { success: true, bookmarked: isBookmarked, message }, status: 200, ok: true };
   }
 
   // 10. Inquiries
@@ -364,26 +434,90 @@ function handleOfflineFallback(url, options, method) {
     let body = {};
     try { body = typeof options.body === 'string' ? JSON.parse(options.body) : options.body || {}; } catch(e){}
     const inquiries = getLocalInquiries();
+    const targetCol = allColleges.find(c => c.id === body.college_id);
     const newInquiry = {
       id: Date.now(),
-      student_name: body.full_name || body.student_name || 'Anonymous Student',
-      email: body.email || 'user@example.com',
-      phone: body.phone || '',
+      student_name: body.student_name || body.full_name || 'Anonymous Student',
+      student_email: body.student_email || body.email || 'user@example.com',
+      student_phone: body.student_phone || body.phone || '+91 9876543210',
+      email: body.student_email || body.email || 'user@example.com',
+      phone: body.student_phone || body.phone || '+91 9876543210',
+      city: body.city || (targetCol ? targetCol.city : ''),
       college_id: body.college_id || null,
-      college_name: body.college_name || 'General Inquiry',
-      target_degree: body.target_degree || 'B.Tech / MBA',
+      college_name: targetCol ? targetCol.name : (body.college_name || 'General Career & Academic Mentorship'),
+      college_slug: targetCol ? targetCol.slug : '',
+      college_city: targetCol ? targetCol.city : (body.city || ''),
+      interested_stream: body.interested_stream || body.target_degree || 'Both',
+      target_degree: body.interested_stream || body.target_degree || 'Both',
       message: body.message || body.comments || '',
+      type: body.type || 'counseling_booking',
       status: 'Pending',
       created_at: new Date().toISOString()
     };
     inquiries.unshift(newInquiry);
     saveLocalInquiries(inquiries);
-    return { data: { success: true, message: 'Inquiry submitted successfully', id: newInquiry.id }, status: 201, ok: true };
+    return {
+      data: {
+        success: true,
+        message: 'Counseling request registered successfully!',
+        inquiryId: newInquiry.id,
+        id: newInquiry.id
+      },
+      status: 201,
+      ok: true
+    };
   }
 
   if (path === '/api/inquiries/my') {
     const inquiries = getLocalInquiries();
     return { data: inquiries, status: 200, ok: true };
+  }
+
+  // 10b. Verified Student Reviews
+  if (path === '/api/reviews' && method === 'POST') {
+    let body = {};
+    try { body = typeof options.body === 'string' ? JSON.parse(options.body) : options.body || {}; } catch(e){}
+    const localReviews = getLocalReviews();
+    const college = allColleges.find(c => c.id === body.college_id);
+    const newReview = {
+      id: Date.now(),
+      college_id: body.college_id,
+      college_slug: college ? college.slug : '',
+      user_name: body.user_name || 'Verified Student',
+      user_program: body.user_program || 'Student',
+      rating: Number(body.rating) || 5,
+      title: body.title || 'Student Experience',
+      review_text: body.review_text || '',
+      pros: body.pros || '',
+      cons: body.cons || '',
+      created_at: new Date().toISOString()
+    };
+    localReviews.unshift(newReview);
+    saveLocalReviews(localReviews);
+    return { data: { success: true, message: 'Review submitted successfully', review: newReview }, status: 201, ok: true };
+  }
+
+  // 10c. User Profile & Password Updates
+  if (path === '/api/auth/profile' && method === 'PUT') {
+    let body = {};
+    try { body = typeof options.body === 'string' ? JSON.parse(options.body) : options.body || {}; } catch(e){}
+    let currentUser = null;
+    try { currentUser = JSON.parse(localStorage.getItem('cc_user') || 'null'); } catch(e){}
+    const updatedUser = {
+      ...(currentUser || {}),
+      id: currentUser?.id || 1,
+      full_name: body.full_name || currentUser?.full_name || 'Student User',
+      phone: body.phone || currentUser?.phone || '',
+      target_degree: body.target_degree || currentUser?.target_degree || 'B.Tech CSE',
+      email: currentUser?.email || 'student@example.com',
+      role: currentUser?.role || 'student'
+    };
+    try { localStorage.setItem('cc_user', JSON.stringify(updatedUser)); } catch(e){}
+    return { data: { success: true, message: 'Profile updated successfully', user: updatedUser }, status: 200, ok: true };
+  }
+
+  if (path === '/api/auth/change-password' && method === 'PUT') {
+    return { data: { success: true, message: 'Password updated successfully' }, status: 200, ok: true };
   }
 
   // 11. Admin Endpoints

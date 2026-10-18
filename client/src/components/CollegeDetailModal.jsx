@@ -365,6 +365,109 @@ export default function CollegeDetailModal({
                 </button>
               </div>
 
+              {/* Review Form */}
+              {showReviewForm && (
+                <form onSubmit={handleReviewSubmit} className="bg-slate-50 border border-slate-200 rounded-2xl p-4 sm:p-5 space-y-3.5 animate-in fade-in duration-200">
+                  <h5 className="font-bold text-slate-800 text-sm flex items-center space-x-1.5">
+                    <Sparkles className="w-4 h-4 text-sky-600" />
+                    <span>Share Your Authentic Campus Experience</span>
+                  </h5>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-600 mb-1">Your Program / Degree Level</label>
+                      <input
+                        type="text"
+                        required
+                        value={reviewProgram}
+                        onChange={(e) => setReviewProgram(e.target.value)}
+                        placeholder="e.g. B.Tech CSE (Class of 2025)"
+                        className="w-full text-xs bg-white border border-slate-200 rounded-lg p-2.5 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-600 mb-1">Rating (1 to 5 Stars)</label>
+                      <select
+                        value={reviewRating}
+                        onChange={(e) => setReviewRating(Number(e.target.value))}
+                        className="w-full text-xs bg-white border border-slate-200 rounded-lg p-2.5 focus:outline-none focus:ring-2 focus:ring-sky-500 font-bold text-amber-600"
+                      >
+                        <option value={5}>⭐⭐⭐⭐⭐ (5.0 - Exceptional)</option>
+                        <option value={4}>⭐⭐⭐⭐ (4.0 - Very Good)</option>
+                        <option value={3}>⭐⭐⭐ (3.0 - Average)</option>
+                        <option value={2}>⭐⭐ (2.0 - Below Average)</option>
+                        <option value={1}>⭐ (1.0 - Poor)</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-600 mb-1">Review Headline / Title</label>
+                    <input
+                      type="text"
+                      required
+                      value={reviewTitle}
+                      onChange={(e) => setReviewTitle(e.target.value)}
+                      placeholder="e.g. Great faculty, rigorous coding culture, excellent placements"
+                      className="w-full text-xs bg-white border border-slate-200 rounded-lg p-2.5 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-600 mb-1">Detailed Review</label>
+                    <textarea
+                      rows={3}
+                      required
+                      value={reviewText}
+                      onChange={(e) => setReviewText(e.target.value)}
+                      placeholder="Share your detailed feedback regarding campus infrastructure, coding labs, hostel food, curriculum, and placement support..."
+                      className="w-full text-xs bg-white border border-slate-200 rounded-lg p-2.5 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-semibold text-emerald-700 mb-1">Pros (Key Strengths)</label>
+                      <input
+                        type="text"
+                        value={reviewPros}
+                        onChange={(e) => setReviewPros(e.target.value)}
+                        placeholder="e.g. Top tier coding labs, lush campus"
+                        className="w-full text-xs bg-white border border-slate-200 rounded-lg p-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-rose-700 mb-1">Cons (Areas for Improvement)</label>
+                      <input
+                        type="text"
+                        value={reviewCons}
+                        onChange={(e) => setReviewCons(e.target.value)}
+                        placeholder="e.g. Tough grading curve, competitive pressure"
+                        className="w-full text-xs bg-white border border-slate-200 rounded-lg p-2.5 focus:outline-none focus:ring-2 focus:ring-rose-500"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-end space-x-2 pt-1">
+                    <button
+                      type="button"
+                      onClick={() => setShowReviewForm(false)}
+                      className="px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-200 rounded-lg transition"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={submittingReview}
+                      className="bg-sky-600 hover:bg-sky-700 text-white font-bold px-4 py-2 rounded-lg text-xs transition flex items-center space-x-1.5 shadow-sm cursor-pointer"
+                    >
+                      <Send className="w-3.5 h-3.5" />
+                      <span>{submittingReview ? 'Submitting...' : 'Post Review'}</span>
+                    </button>
+                  </div>
+                </form>
+              )}
+
               {/* Reviews List */}
               <div className="space-y-3">
                 {college.reviews?.length === 0 ? (

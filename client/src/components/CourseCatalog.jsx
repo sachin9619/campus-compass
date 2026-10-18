@@ -124,7 +124,7 @@ export default function CourseCatalog({ onSelectCollege }) {
                   onClick={() => onSelectCollege(crs.college_slug)}
                   className="text-xs font-bold text-sky-600 hover:underline cursor-pointer mt-1"
                 >
-                  {crs.college_name} ({crs.college_city})
+                  {crs.college_name}{crs.college_city ? ` (${crs.college_city})` : ''}
                 </p>
 
                 {crs.specialization && (
@@ -152,7 +152,7 @@ export default function CourseCatalog({ onSelectCollege }) {
                 <div>
                   <span className="text-[10px] uppercase font-bold text-slate-400 block">Annual Tuition</span>
                   <span className="text-sm font-extrabold text-slate-900">
-                    ₹{(crs.total_annual_fee / 100000).toFixed(2)} Lakhs
+                    {crs.total_annual_fee ? `₹${(crs.total_annual_fee / 100000).toFixed(2)} Lakhs` : 'Contact Inst.'}
                   </span>
                 </div>
 

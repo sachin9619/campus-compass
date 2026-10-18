@@ -345,7 +345,7 @@ export default function CompareModal({
                   </td>
                   {colleges.map(col => (
                     <td key={col.id} className="p-2.5 sm:p-3 font-black text-emerald-700 text-sm sm:text-base">
-                      ₹{col.avg_package_lpa} LPA
+                      {col.avg_package_lpa ? `₹${col.avg_package_lpa} LPA` : '—'}
                     </td>
                   ))}
                   {colleges.length < 4 && <td className="bg-slate-50/30"></td>}
@@ -358,7 +358,7 @@ export default function CompareModal({
                   </td>
                   {colleges.map(col => (
                     <td key={col.id} className="p-2.5 sm:p-3 font-bold text-slate-800">
-                      ₹{col.highest_package_lpa} LPA
+                      {col.highest_package_lpa ? `₹${col.highest_package_lpa} LPA` : '—'}
                     </td>
                   ))}
                   {colleges.length < 4 && <td className="bg-slate-50/30"></td>}
@@ -371,7 +371,11 @@ export default function CompareModal({
                   </td>
                   {colleges.map(col => (
                     <td key={col.id} className="p-2.5 sm:p-3 font-semibold text-slate-800">
-                      ₹{(col.min_annual_fee / 100000).toFixed(1)}L - ₹{(col.max_annual_fee / 100000).toFixed(1)}L
+                      {col.min_annual_fee && col.max_annual_fee
+                        ? `₹${(col.min_annual_fee / 100000).toFixed(1)}L - ₹${(col.max_annual_fee / 100000).toFixed(1)}L`
+                        : col.min_annual_fee
+                        ? `₹${(col.min_annual_fee / 100000).toFixed(1)}L/yr`
+                        : 'Contact Inst.'}
                     </td>
                   ))}
                   {colleges.length < 4 && <td className="bg-slate-50/30"></td>}
