@@ -109,7 +109,7 @@ export default function MyApplications({ token, onSelectCollege, onOpenCounselin
                       onClick={() => onSelectCollege(inq.college_slug)}
                       className="hover:text-sky-600 cursor-pointer"
                     >
-                      {inq.college_name} ({inq.college_city})
+                      {inq.college_name}{inq.college_city ? ` (${inq.college_city})` : ''}
                     </span>
                   ) : (
                     'General Career & Academic Mentorship'
