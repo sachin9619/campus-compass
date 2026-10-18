@@ -288,9 +288,9 @@ export default function AdminDashboard({ user, token, onExitAdmin, onLogout }) {
   };
 
   const filteredInquiries = inquiries.filter(inq =>
-    (inq.student_name || '').toLowerCase().includes(inquirySearch.toLowerCase()) ||
-    (inq.student_email || '').toLowerCase().includes(inquirySearch.toLowerCase()) ||
-    (inq.student_phone || '').includes(inquirySearch) ||
+    (inq.student_name || inq.full_name || '').toLowerCase().includes(inquirySearch.toLowerCase()) ||
+    (inq.student_email || inq.email || '').toLowerCase().includes(inquirySearch.toLowerCase()) ||
+    (inq.student_phone || inq.phone || '').includes(inquirySearch) ||
     (inq.college_name || '').toLowerCase().includes(inquirySearch.toLowerCase())
   );
 
@@ -522,21 +522,21 @@ export default function AdminDashboard({ user, token, onExitAdmin, onLogout }) {
                   <tbody className="divide-y divide-slate-800/80">
                     {inquiries.slice(0, 5).map(inq => (
                       <tr key={inq.id} className="hover:bg-slate-800/40">
-                        <td className="p-3 font-bold text-white whitespace-nowrap">{inq.student_name}</td>
-                        <td className="p-3 text-slate-300 whitespace-nowrap">{inq.student_phone}</td>
+                        <td className="p-3 font-bold text-white whitespace-nowrap">{inq.student_name || inq.full_name}</td>
+                        <td className="p-3 text-slate-300 whitespace-nowrap">{inq.student_phone || inq.phone || '—'}</td>
                         <td className="p-3 text-slate-300">{inq.college_name || 'General Guidance'}</td>
-                        <td className="p-3 text-purple-300 font-semibold">{inq.interested_stream}</td>
+                        <td className="p-3 text-purple-300 font-semibold">{inq.interested_stream || inq.target_degree || '—'}</td>
                         <td className="p-3 whitespace-nowrap">
                           <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
-                            inq.status === 'resolved' ? 'bg-emerald-950 text-emerald-400 border border-emerald-800' :
-                            inq.status === 'contacted' ? 'bg-sky-950 text-sky-400 border border-sky-800' :
+                            (inq.status||'').toLowerCase() === 'resolved' ? 'bg-emerald-950 text-emerald-400 border border-emerald-800' :
+                            (inq.status||'').toLowerCase() === 'contacted' ? 'bg-sky-950 text-sky-400 border border-sky-800' :
                             'bg-amber-950 text-amber-400 border border-amber-800'
                           }`}>
-                            {inq.status}
+                            {inq.status || 'Pending'}
                           </span>
                         </td>
                         <td className="p-3 text-right whitespace-nowrap">
-                          {inq.status === 'pending' && (
+                          {(inq.status||'').toLowerCase() === 'pending' && (
                             <button
                               onClick={() => updateInquiryStatus(inq.id, 'contacted')}
                               className="text-sky-400 hover:text-sky-300 text-xs font-bold underline cursor-pointer"
@@ -621,17 +621,17 @@ export default function AdminDashboard({ user, token, onExitAdmin, onLogout }) {
                     filteredInquiries.map((inq) => (
                       <tr key={inq.id} className="hover:bg-slate-800/40">
                         <td className="p-3 font-bold text-white whitespace-nowrap">
-                          {inq.student_name}
+                          {inq.student_name || inq.full_name}
                           {inq.city && <span className="block text-[10px] text-slate-400 font-normal">{inq.city}</span>}
                         </td>
                         <td className="p-3 space-y-0.5 whitespace-nowrap">
                           <div className="flex items-center space-x-1 text-slate-300">
                             <Phone className="w-3 h-3 text-emerald-400" />
-                            <span>{inq.student_phone}</span>
+                            <span>{inq.student_phone || inq.phone || '—'}</span>
                           </div>
                           <div className="flex items-center space-x-1 text-slate-400">
                             <Mail className="w-3 h-3 text-sky-400" />
-                            <span>{inq.student_email}</span>
+                            <span>{inq.student_email || inq.email || '—'}</span>
                           </div>
                         </td>
                         <td className="p-3 font-semibold text-slate-300">
@@ -639,33 +639,33 @@ export default function AdminDashboard({ user, token, onExitAdmin, onLogout }) {
                         </td>
                         <td className="p-3 max-w-xs">
                           <span className="font-bold text-purple-300 bg-purple-950/80 border border-purple-800/50 px-1.5 py-0.5 rounded mr-1">
-                            {inq.interested_stream}
+                            {inq.interested_stream || inq.target_degree || '—'}
                           </span>
-                          <span className="text-slate-400 line-clamp-1">{inq.message || inq.type}</span>
+                          <span className="text-slate-400 line-clamp-1">{inq.message || inq.type || ''}</span>
                         </td>
                         <td className="p-3 whitespace-nowrap">
                           <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
-                            inq.status === 'resolved'
+                            (inq.status||'').toLowerCase() === 'resolved'
                               ? 'bg-emerald-950 text-emerald-400 border border-emerald-800'
-                              : inq.status === 'contacted'
+                              : (inq.status||'').toLowerCase() === 'contacted'
                               ? 'bg-sky-950 text-sky-400 border border-sky-800'
                               : 'bg-amber-950 text-amber-400 border border-amber-800'
                           }`}>
-                            {inq.status}
+                            {inq.status || 'Pending'}
                           </span>
                         </td>
                         <td className="p-3 text-right whitespace-nowrap space-x-1.5">
-                          {inq.status === 'pending' && (
+                          {(inq.status||'').toLowerCase() === 'pending' && (
                             <button
-                              onClick={() => updateInquiryStatus(inq.id, 'contacted')}
+                              onClick={() => updateInquiryStatus(inq.id, 'Contacted')}
                               className="bg-sky-600 hover:bg-sky-500 text-white px-2.5 py-1 rounded-lg text-[11px] font-bold cursor-pointer"
                             >
                               Contacted
                             </button>
                           )}
-                          {inq.status !== 'resolved' && (
+                          {(inq.status||'').toLowerCase() !== 'resolved' && (
                             <button
-                              onClick={() => updateInquiryStatus(inq.id, 'resolved')}
+                              onClick={() => updateInquiryStatus(inq.id, 'Resolved')}
                               className="bg-emerald-600 hover:bg-emerald-500 text-white px-2.5 py-1 rounded-lg text-[11px] font-bold cursor-pointer"
                             >
                               Resolved

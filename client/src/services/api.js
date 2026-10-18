@@ -404,21 +404,119 @@ function handleOfflineFallback(url, options, method) {
 
   if (path === '/api/admin/inquiries') {
     const inquiries = getLocalInquiries();
-    return { data: { inquiries, total: inquiries.length }, status: 200, ok: true };
+    // Apply status filter if present in query params
+    const statusFilter = params.get('status');
+    const filtered = statusFilter
+      ? inquiries.filter(i => i.status.toLowerCase() === statusFilter.toLowerCase())
+      : inquiries;
+    return { data: { inquiries: filtered, total: filtered.length }, status: 200, ok: true };
   }
 
   const adminInquiryStatusMatch = path.match(/^\/api\/admin\/inquiries\/([0-9]+)$/);
-  if (adminInquiryStatusMatch && method === 'PUT') {
+  if (adminInquiryStatusMatch && (method === 'PUT' || method === 'PATCH')) {
     const id = parseInt(adminInquiryStatusMatch[1], 10);
     let body = {};
     try { body = typeof options.body === 'string' ? JSON.parse(options.body) : options.body || {}; } catch(e){}
     const inquiries = getLocalInquiries();
-    const item = inquiries.find(i => i.id === id);
+    // Match by id (numeric or string timestamp)
+    const item = inquiries.find(i => String(i.id) === String(id) || i.id === id);
     if (item && body.status) {
-      item.status = body.status;
+      // Capitalize first letter to match stored format
+      item.status = body.status.charAt(0).toUpperCase() + body.status.slice(1);
       saveLocalInquiries(inquiries);
     }
     return { data: { success: true }, status: 200, ok: true };
+  }
+
+  // 12. Admin Courses (GET all courses for admin panel)
+  if (path === '/api/admin/courses' && method === 'GET') {
+    const courses = [];
+    allColleges.forEach(col => {
+      if (col.courses) {
+        col.courses.forEach(crs => {
+          courses.push({
+            ...crs,
+            college_name: col.name,
+            college_short_name: col.short_name || col.name,
+            college_slug: col.slug,
+            college_city: col.city,
+            college_state: col.state
+          });
+        });
+      }
+    });
+    return { data: courses, status: 200, ok: true };
+  }
+
+  // 13. Admin College CRUD (POST/PUT/DELETE)
+  const adminCollegesMatch = path.match(/^\/api\/admin\/colleges(\/([0-9]+))?$/);
+  if (adminCollegesMatch) {
+    if (method === 'POST') {
+      let body = {};
+      try { body = typeof options.body === 'string' ? JSON.parse(options.body) : options.body || {}; } catch(e){}
+      const colleges = getLocalColleges();
+      const newCol = { ...body, id: Date.now(), slug: (body.name || 'college').toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '') };
+      colleges.push(newCol);
+      saveLocalColleges(colleges);
+      return { data: { success: true, college: newCol }, status: 201, ok: true };
+    }
+    const colId = adminCollegesMatch[2] ? parseInt(adminCollegesMatch[2]) : null;
+    if (method === 'PUT' && colId) {
+      let body = {};
+      try { body = typeof options.body === 'string' ? JSON.parse(options.body) : options.body || {}; } catch(e){}
+      const colleges = getLocalColleges();
+      const idx = colleges.findIndex(c => c.id === colId);
+      if (idx !== -1) { colleges[idx] = { ...colleges[idx], ...body }; saveLocalColleges(colleges); }
+      return { data: { success: true }, status: 200, ok: true };
+    }
+    if (method === 'DELETE' && colId) {
+      const colleges = getLocalColleges().filter(c => c.id !== colId);
+      saveLocalColleges(colleges);
+      return { data: { success: true }, status: 200, ok: true };
+    }
+  }
+
+  // 14. Admin Course CRUD (POST to college, PUT/DELETE individual)
+  const adminCollegeCourseMatch = path.match(/^\/api\/admin\/colleges\/([0-9]+)\/courses$/);
+  if (adminCollegeCourseMatch && method === 'POST') {
+    let body = {};
+    try { body = typeof options.body === 'string' ? JSON.parse(options.body) : options.body || {}; } catch(e){}
+    const colleges = getLocalColleges();
+    const colId = parseInt(adminCollegeCourseMatch[1]);
+    const col = colleges.find(c => c.id === colId);
+    if (col) {
+      if (!col.courses) col.courses = [];
+      const newCourse = { ...body, id: Date.now() };
+      col.courses.push(newCourse);
+      saveLocalColleges(colleges);
+    }
+    return { data: { success: true }, status: 201, ok: true };
+  }
+
+  const adminCourseMatch = path.match(/^\/api\/admin\/courses\/([0-9]+)$/);
+  if (adminCourseMatch) {
+    const courseId = parseInt(adminCourseMatch[1]);
+    if (method === 'PUT') {
+      let body = {};
+      try { body = typeof options.body === 'string' ? JSON.parse(options.body) : options.body || {}; } catch(e){}
+      const colleges = getLocalColleges();
+      colleges.forEach(col => {
+        if (col.courses) {
+          const idx = col.courses.findIndex(c => c.id === courseId);
+          if (idx !== -1) col.courses[idx] = { ...col.courses[idx], ...body };
+        }
+      });
+      saveLocalColleges(colleges);
+      return { data: { success: true }, status: 200, ok: true };
+    }
+    if (method === 'DELETE') {
+      const colleges = getLocalColleges();
+      colleges.forEach(col => {
+        if (col.courses) col.courses = col.courses.filter(c => c.id !== courseId);
+      });
+      saveLocalColleges(colleges);
+      return { data: { success: true }, status: 200, ok: true };
+    }
   }
 
   // Default fallback for any other route
