@@ -86,15 +86,15 @@ export default function MyApplications({ token, onSelectCollege, onOpenCounselin
                     #INQ-{inq.id}
                   </span>
                   <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider ${
-                    inq.status === 'resolved'
+                    (inq.status || '').toLowerCase() === 'resolved'
                       ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
-                      : inq.status === 'contacted'
+                      : (inq.status || '').toLowerCase() === 'contacted'
                       ? 'bg-blue-100 text-blue-800 border border-blue-200'
                       : 'bg-amber-100 text-amber-800 border border-amber-200'
                   }`}>
-                    {inq.status === 'resolved'
+                    {(inq.status || '').toLowerCase() === 'resolved'
                       ? 'Completed & Resolved'
-                      : inq.status === 'contacted'
+                      : (inq.status || '').toLowerCase() === 'contacted'
                       ? 'Counselor Assigned & Contacted'
                       : 'Under Academic Review'}
                   </span>
@@ -117,8 +117,8 @@ export default function MyApplications({ token, onSelectCollege, onOpenCounselin
                 </h4>
 
                 <p className="text-xs text-slate-600">
-                  <span className="font-semibold text-slate-500">Track:</span> {inq.interested_stream} Focus •{' '}
-                  <span className="font-semibold text-slate-500">Type:</span> {inq.type.replace('_', ' ')}
+                  <span className="font-semibold text-slate-500">Track:</span> {inq.interested_stream || inq.target_degree || 'General'} Focus •{' '}
+                  <span className="font-semibold text-slate-500">Type:</span> {(inq.type || 'counseling_request').replace('_', ' ')}
                 </p>
 
                 {inq.message && (
