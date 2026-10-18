@@ -20,6 +20,7 @@ import {
   ChevronLeft, ChevronRight, Bookmark, ArrowRight, ShieldCheck, ShieldAlert, 
   HelpCircle, Scale, GraduationCap, CheckCircle2, AlertCircle, Filter, X 
 } from 'lucide-react';
+import { apiRequest } from './services/api';
 
 export default function App() {
   // Authentication State
@@ -110,8 +111,7 @@ export default function App() {
 
   const fetchAllColleges = async () => {
     try {
-      const res = await fetch('/api/colleges/all-names');
-      const data = await res.json();
+      const { data } = await apiRequest('/api/colleges/all-names');
       if (Array.isArray(data)) setAllCollegesList(data);
     } catch (err) {
       console.error('Failed to load all colleges list', err);
@@ -137,8 +137,7 @@ export default function App() {
 
   const fetchStats = async () => {
     try {
-      const res = await fetch('/api/colleges/stats');
-      const data = await res.json();
+      const { data } = await apiRequest('/api/colleges/stats');
       setStats(data);
     } catch (err) {
       console.error('Failed to load stats', err);
@@ -147,8 +146,7 @@ export default function App() {
 
   const fetchFilterOptions = async () => {
     try {
-      const res = await fetch('/api/colleges/filters');
-      const data = await res.json();
+      const { data } = await apiRequest('/api/colleges/filters');
       setFilterOptions(data);
     } catch (err) {
       console.error('Failed to load filters', err);
@@ -175,12 +173,12 @@ export default function App() {
       const headers = {};
       if (token) headers['Authorization'] = `Bearer ${token}`;
 
-      const res = await fetch(`/api/colleges?${params.toString()}`, { headers });
-      if (res.status === 401 && token) {
+      const result = await apiRequest(`/api/colleges?${params.toString()}`, { headers });
+      if (result.status === 401 && token) {
         handleSessionExpired();
         return;
       }
-      const data = await res.json();
+      const data = result.data;
       setColleges(data.colleges || []);
       setPagination(data.pagination || { page: 1, totalPages: 1, total: 0 });
     } catch (err) {
@@ -192,15 +190,14 @@ export default function App() {
 
   const fetchBookmarks = async () => {
     try {
-      const res = await fetch('/api/auth/bookmarks', {
+      const result = await apiRequest('/api/auth/bookmarks', {
         headers: { Authorization: `Bearer ${token}` }
       });
-      if (res.status === 401) {
+      if (result.status === 401) {
         handleSessionExpired();
         return;
       }
-      const data = await res.json();
-      setBookmarkedColleges(data);
+      setBookmarkedColleges(result.data);
     } catch (err) {
       console.error('Failed to load bookmarks', err);
     }
@@ -212,8 +209,7 @@ export default function App() {
       const headers = {};
       if (token) headers['Authorization'] = `Bearer ${token}`;
 
-      const res = await fetch(`/api/colleges/${slug}`, { headers });
-      const data = await res.json();
+      const { data } = await apiRequest(`/api/colleges/${slug}`, { headers });
       setCollegeDetail(data);
     } catch (err) {
       console.error('Failed to load college detail', err);
@@ -261,15 +257,15 @@ export default function App() {
     }
 
     try {
-      const res = await fetch(`/api/auth/bookmarks/${college.id}`, {
+      const result = await apiRequest(`/api/auth/bookmarks/${college.id}`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` }
       });
-      if (res.status === 401) {
+      if (result.status === 401) {
         handleSessionExpired();
         return;
       }
-      const data = await res.json();
+      const data = result.data;
 
       setColleges(prev => prev.map(c => c.id === college.id ? { ...c, is_bookmarked: data.bookmarked } : c));
       if (collegeDetail && collegeDetail.id === college.id) {
@@ -286,13 +282,13 @@ export default function App() {
 
   // Login Handler
   const handleLogin = async ({ email, password }) => {
-    const res = await fetch('/api/auth/login', {
+    const result = await apiRequest('/api/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password })
     });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error);
+    const data = result.data;
+    if (!result.ok) throw new Error(data.error);
 
     setUser(data.user);
     setToken(data.token);
@@ -306,13 +302,13 @@ export default function App() {
 
   // Register Handler
   const handleRegister = async (formPayload) => {
-    const res = await fetch('/api/auth/register', {
+    const result = await apiRequest('/api/auth/register', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(formPayload)
     });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error);
+    const data = result.data;
+    if (!result.ok) throw new Error(data.error);
 
     setUser(data.user);
     setToken(data.token);
@@ -325,7 +321,7 @@ export default function App() {
   const handleEndSession = async () => {
     try {
       if (token) {
-        await fetch('/api/auth/logout', {
+        await apiRequest('/api/auth/logout', {
           method: 'POST',
           headers: { Authorization: `Bearer ${token}` }
         });
@@ -363,20 +359,20 @@ export default function App() {
     const headers = { 'Content-Type': 'application/json' };
     if (token) headers['Authorization'] = `Bearer ${token}`;
 
-    const res = await fetch('/api/inquiries', {
+    const result = await apiRequest('/api/inquiries', {
       method: 'POST',
       headers,
       body: JSON.stringify(inquiryData)
     });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error);
+    const data = result.data;
+    if (!result.ok) throw new Error(data.error);
 
     showToast('Counseling request registered successfully!');
     return data;
   };
 
   const handleReviewSubmit = async (reviewData) => {
-    const res = await fetch('/api/reviews', {
+    const result = await apiRequest('/api/reviews', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -384,12 +380,12 @@ export default function App() {
       },
       body: JSON.stringify(reviewData)
     });
-    if (res.status === 401) {
+    if (result.status === 401) {
       handleSessionExpired();
       throw new Error('Your session has ended. Please log in again.');
     }
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error);
+    const data = result.data;
+    if (!result.ok) throw new Error(data.error);
 
     if (selectedCollegeSlug) {
       handleSelectCollege(selectedCollegeSlug);

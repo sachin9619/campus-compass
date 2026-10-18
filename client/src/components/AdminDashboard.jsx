@@ -5,6 +5,7 @@ import {
   ExternalLink, RefreshCw, GraduationCap, X, Check, ArrowRight, 
   IndianRupee, Eye, LogOut, Activity, Database, CheckCircle2, ChevronRight
 } from 'lucide-react';
+import { apiRequest } from '../services/api';
 
 export default function AdminDashboard({ user, token, onExitAdmin, onLogout }) {
   const [metrics, setMetrics] = useState(null);
@@ -77,10 +78,9 @@ export default function AdminDashboard({ user, token, onExitAdmin, onLogout }) {
 
   const fetchMetrics = async () => {
     try {
-      const res = await fetch('/api/admin/metrics', {
+      const { data } = await apiRequest('/api/admin/metrics', {
         headers: { Authorization: `Bearer ${token}` }
       });
-      const data = await res.json();
       setMetrics(data);
     } catch (err) {
       console.error('Failed to fetch admin metrics', err);
@@ -93,11 +93,10 @@ export default function AdminDashboard({ user, token, onExitAdmin, onLogout }) {
       const url = inquiryStatusFilter === 'all' 
         ? '/api/admin/inquiries' 
         : `/api/admin/inquiries?status=${inquiryStatusFilter}`;
-      const res = await fetch(url, {
+      const { data } = await apiRequest(url, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      const data = await res.json();
-      setInquiries(Array.isArray(data) ? data : []);
+      setInquiries(Array.isArray(data) ? data : (data?.inquiries || []));
     } catch (err) {
       console.error('Failed to fetch inquiries', err);
     } finally {
@@ -107,8 +106,7 @@ export default function AdminDashboard({ user, token, onExitAdmin, onLogout }) {
 
   const fetchColleges = async () => {
     try {
-      const res = await fetch('/api/colleges/all-names');
-      const data = await res.json();
+      const { data } = await apiRequest('/api/colleges/all-names');
       setColleges(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error('Failed to fetch colleges for admin', err);
@@ -117,10 +115,9 @@ export default function AdminDashboard({ user, token, onExitAdmin, onLogout }) {
 
   const fetchCourses = async () => {
     try {
-      const res = await fetch('/api/admin/courses', {
+      const { data } = await apiRequest('/api/admin/courses', {
         headers: { Authorization: `Bearer ${token}` }
       });
-      const data = await res.json();
       setCourses(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error('Failed to fetch courses for admin', err);
@@ -129,7 +126,7 @@ export default function AdminDashboard({ user, token, onExitAdmin, onLogout }) {
 
   const updateInquiryStatus = async (id, status) => {
     try {
-      const res = await fetch(`/api/admin/inquiries/${id}`, {
+      const result = await apiRequest(`/api/admin/inquiries/${id}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -137,7 +134,7 @@ export default function AdminDashboard({ user, token, onExitAdmin, onLogout }) {
         },
         body: JSON.stringify({ status })
       });
-      if (res.ok) {
+      if (result.ok) {
         fetchInquiries();
         fetchMetrics();
       }
@@ -151,7 +148,7 @@ export default function AdminDashboard({ user, token, onExitAdmin, onLogout }) {
     e.preventDefault();
     setSavingCollege(true);
     try {
-      const res = await fetch('/api/admin/colleges', {
+      const result = await apiRequest('/api/admin/colleges', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -159,8 +156,8 @@ export default function AdminDashboard({ user, token, onExitAdmin, onLogout }) {
         },
         body: JSON.stringify(newCollege)
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
+      const data = result.data;
+      if (!result.ok) throw new Error(data.error);
 
       alert('College created successfully!');
       setActiveAdminTab('colleges');
@@ -180,7 +177,7 @@ export default function AdminDashboard({ user, token, onExitAdmin, onLogout }) {
     if (!editingCollege) return;
     setSavingEditCollege(true);
     try {
-      const res = await fetch(`/api/admin/colleges/${editingCollege.id}`, {
+      const result = await apiRequest(`/api/admin/colleges/${editingCollege.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -188,8 +185,8 @@ export default function AdminDashboard({ user, token, onExitAdmin, onLogout }) {
         },
         body: JSON.stringify(editingCollege)
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
+      const data = result.data;
+      if (!result.ok) throw new Error(data.error);
 
       alert('College updated successfully!');
       setEditingCollege(null);
@@ -207,11 +204,11 @@ export default function AdminDashboard({ user, token, onExitAdmin, onLogout }) {
     if (!confirm(`Are you sure you want to delete ${name}? This will also delete all associated courses.`)) return;
 
     try {
-      const res = await fetch(`/api/admin/colleges/${id}`, {
+      const result = await apiRequest(`/api/admin/colleges/${id}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` }
       });
-      if (res.ok) {
+      if (result.ok) {
         fetchColleges();
         fetchCourses();
         fetchMetrics();
@@ -229,7 +226,7 @@ export default function AdminDashboard({ user, token, onExitAdmin, onLogout }) {
       return;
     }
     try {
-      const res = await fetch(`/api/admin/colleges/${newCourse.college_id}/courses`, {
+      const result = await apiRequest(`/api/admin/colleges/${newCourse.college_id}/courses`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -237,8 +234,8 @@ export default function AdminDashboard({ user, token, onExitAdmin, onLogout }) {
         },
         body: JSON.stringify(newCourse)
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
+      const data = result.data;
+      if (!result.ok) throw new Error(data.error);
 
       alert('Course added successfully!');
       setIsAddCourseOpen(false);
@@ -254,7 +251,7 @@ export default function AdminDashboard({ user, token, onExitAdmin, onLogout }) {
     e.preventDefault();
     if (!editingCourse) return;
     try {
-      const res = await fetch(`/api/admin/courses/${editingCourse.id}`, {
+      const result = await apiRequest(`/api/admin/courses/${editingCourse.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -262,8 +259,8 @@ export default function AdminDashboard({ user, token, onExitAdmin, onLogout }) {
         },
         body: JSON.stringify(editingCourse)
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
+      const data = result.data;
+      if (!result.ok) throw new Error(data.error);
 
       alert('Course updated successfully!');
       setEditingCourse(null);
@@ -277,11 +274,11 @@ export default function AdminDashboard({ user, token, onExitAdmin, onLogout }) {
   const handleDeleteCourse = async (id, courseName) => {
     if (!confirm(`Are you sure you want to delete ${courseName}?`)) return;
     try {
-      const res = await fetch(`/api/admin/courses/${id}`, {
+      const result = await apiRequest(`/api/admin/courses/${id}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` }
       });
-      if (res.ok) {
+      if (result.ok) {
         fetchCourses();
         fetchMetrics();
       }

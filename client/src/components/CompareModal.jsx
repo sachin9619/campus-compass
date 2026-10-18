@@ -4,6 +4,8 @@ import {
   Globe, ExternalLink, ArrowRight, Plus, Scale, Search, Building2, Sparkles, Trash2 
 } from 'lucide-react';
 
+import { apiRequest } from '../services/api';
+
 export default function CompareModal({
   colleges = [],
   allColleges = [],
@@ -20,9 +22,8 @@ export default function CompareModal({
   // If allColleges wasn't passed down or empty, fetch from API
   useEffect(() => {
     if (!allColleges || allColleges.length === 0) {
-      fetch('/api/colleges/all-names')
-        .then(res => res.json())
-        .then(data => {
+      apiRequest('/api/colleges/all-names')
+        .then(({ data }) => {
           if (Array.isArray(data)) setInternalAllColleges(data);
         })
         .catch(err => console.error('Failed to load all colleges for comparison:', err));

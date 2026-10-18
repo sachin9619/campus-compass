@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { X, User, Phone, GraduationCap, Lock, ShieldCheck, Check, KeyRound } from 'lucide-react';
+import { apiRequest } from '../services/api';
 
 export default function ProfileModal({
   isOpen,
@@ -29,7 +30,7 @@ export default function ProfileModal({
     setLoading(true);
 
     try {
-      const res = await fetch('/api/auth/profile', {
+      const result = await apiRequest('/api/auth/profile', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -42,8 +43,8 @@ export default function ProfileModal({
         })
       });
 
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
+      const data = result.data;
+      if (!result.ok) throw new Error(data.error);
 
       onProfileUpdated(data.user);
       setSuccessMsg('Profile updated successfully!');
@@ -67,7 +68,7 @@ export default function ProfileModal({
 
     setLoading(true);
     try {
-      const res = await fetch('/api/auth/change-password', {
+      const result = await apiRequest('/api/auth/change-password', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -79,8 +80,8 @@ export default function ProfileModal({
         })
       });
 
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
+      const data = result.data;
+      if (!result.ok) throw new Error(data.error);
 
       setSuccessMsg('Password changed successfully!');
       setCurrentPassword('');

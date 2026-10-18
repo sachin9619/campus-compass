@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { GraduationCap, Search, Filter, BookOpen, IndianRupee, Award, ArrowUpRight } from 'lucide-react';
 
+import { apiRequest } from '../services/api';
+
 export default function CourseCatalog({ onSelectCollege }) {
   const [courses, setCourses] = useState([]);
   const [domainFilter, setDomainFilter] = useState('All');
@@ -20,8 +22,7 @@ export default function CourseCatalog({ onSelectCollege }) {
       if (degreeFilter !== 'All') params.append('degree_level', degreeFilter);
       if (searchTerm) params.append('search', searchTerm);
 
-      const res = await fetch(`/api/courses?${params.toString()}`);
-      const data = await res.json();
+      const { data } = await apiRequest(`/api/courses?${params.toString()}`);
       setCourses(data);
     } catch (err) {
       console.error('Failed to fetch courses catalog', err);

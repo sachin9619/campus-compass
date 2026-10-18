@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { FileText, Phone, Mail, Clock, CheckCircle2, ChevronRight, AlertCircle, Sparkles } from 'lucide-react';
 
+import { apiRequest } from '../services/api';
+
 export default function MyApplications({ token, onSelectCollege, onOpenCounseling }) {
   const [inquiries, setInquiries] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -12,10 +14,9 @@ export default function MyApplications({ token, onSelectCollege, onOpenCounselin
   const fetchMyInquiries = async () => {
     try {
       setLoading(true);
-      const res = await fetch('/api/inquiries/my', {
+      const { data } = await apiRequest('/api/inquiries/my', {
         headers: { Authorization: `Bearer ${token}` }
       });
-      const data = await res.json();
       setInquiries(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error('Failed to load my inquiries', err);
